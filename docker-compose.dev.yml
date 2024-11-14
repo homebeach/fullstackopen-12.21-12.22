@@ -1,0 +1,71 @@
+version: "3.8"
+
+services:
+  # Backend Service
+  backend:
+    build:
+      context: ./bloglist-backend # Path to the backend directory
+      dockerfile: dev.Dockerfile # The Dockerfile for the backend
+    container_name: bloglist-backend
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./bloglist-backend:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+    networks:
+      - app-network
+    restart: on-failure
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./bloglist-frontend # Path to the frontend directory
+      dockerfile: dev.Dockerfile # The Dockerfile for the frontend
+    container_name: bloglist-frontend
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./bloglist-frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    restart: on-failure
+
+  # MongoDB Service (optional, if your app requires it)
+  mongodb:
+    image: mongo:latest
+    container_name: bloglist-mongo
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-network
+    restart: on-failure
+
+  # Nginx Service (Reverse Proxy)
+  nginx:
+    image: nginx:latest
+    container_name: bloglist-nginx
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/conf.d/default.conf # Mount the custom nginx config
+      - ./bloglist-frontend/build:/usr/share/nginx/html # Serve frontend build files
+    ports:
+      - "8080:80" # Expose port 8080 for frontend access
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app-network
+    restart: on-failure
+
+# Named Volumes for persistent data
+volumes:
+  mongo-data:
+
+# Networks for communication between services
+networks:
+  app-network:
+    driver: bridge
